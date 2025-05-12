@@ -29,8 +29,6 @@ const SortType = {
     LIKES: "LIKES"
 }
 
-const API_BASE_URL = 'https://dev.tuituiworld.store//api/v1';
-
 document.addEventListener('DOMContentLoaded', function () {
     // URL에서 파라미터 읽어오기
     loadStateFromURL();
@@ -135,7 +133,7 @@ function updateURLFromState(pushState = true) {
 }
 
 // 브라우저 뒤로가기/앞으로가기 처리
-window.addEventListener('popstate', function(event) {
+window.addEventListener('popstate', function (event) {
     if (event.state) {
         // 상태 복원
         currentCategory = event.state.category || '';
@@ -271,7 +269,7 @@ function initPetCategoryFilter() {
     const petFilterItems = document.querySelectorAll('.pet-filter-item');
 
     petFilterItems.forEach(item => {
-        item.addEventListener('click', function(e) {
+        item.addEventListener('click', function (e) {
             e.preventDefault();
 
             // 활성화 클래스 제거
@@ -320,7 +318,7 @@ async function fetchAndRenderPosts() {
 
 async function fetchPosts() {
     // API 요청 URL 구성
-    let url = `${API_BASE_URL}/posts/open?page=${currentPage}`;
+    let url = `/api/v1/posts/open?page=${currentPage}`;
 
     // 검색어가 있으면 추가
     if (currentSearch) {
@@ -345,7 +343,6 @@ async function fetchPosts() {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
-            "Authorization" : `Bearer ${getAuthToken()}`
         }
     });
 
@@ -551,7 +548,7 @@ function initWriteButton() {
  */
 function initPostInteractions() {
     // 이 함수는 게시글이 렌더링된 후에 호출됨
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         // 게시글 클릭 처리
         const postItem = e.target.closest('.post-item');
         if (postItem) {
@@ -609,13 +606,12 @@ async function toggleLike(postId, likeBtn) {
         // API 호출 (실제 구현 시 수정 필요)
         const isLiked = likeBtn.classList.contains('liked');
         const method = isLiked ? 'DELETE' : 'POST';
-        const url = `${API_BASE_URL}/posts/${postId}/likes/toggle`;
+        const url = `/api/v1/posts/${postId}/likes/toggle`;
 
         const response = await fetch(url, {
             method: method,
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${getAuthToken()}` // 실제 인증 토큰 가져오기
             }
         });
 
@@ -837,6 +833,57 @@ function renderPagination(page, totalPages) {
             e.preventDefault();
             currentPage--;
             updateURLFromState(false); // replaceState 사용
+            fetchAndRenderPosts();
+            window.scrollTo(0, 0);
+        });
+    }
+
+    // 페이지 번호 버튼 생성
+    // 화면에 표시할 페이지 번호의 범위 계산 (최대 5개)
+    let startPage = Math.max(0, Math.min(page - 2, totalPages - 5));
+    let endPage = Math.min(startPage + 4, totalPages - 1);
+
+    // 페이지 수가 적으면 모든 페이지를 표시
+    if (totalPages <= 5) {
+        startPage = 0;
+        endPage = totalPages - 1;
+    }
+
+    // 페이지 번호 버튼 생성
+    for (let i = startPage; i <= endPage; i++) {
+        const pageLi = document.createElement('li');
+        pageLi.className = 'page-item' + (i === page ? ' active' : '');
+        pageLi.innerHTML = `<a class="page-link" href="#">${i + 1}</a>`;
+        paginationContainer.appendChild(pageLi);
+
+        // 페이지 번호 버튼 이벤트
+        pageLi.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (i !== page) {
+                currentPage = i;
+                updateURLFromState(false);
+                fetchAndRenderPosts();
+                window.scrollTo(0, 0);
+            }
+        });
+    }
+
+    // 다음 페이지 버튼
+    const nextLi = document.createElement('li');
+    nextLi.className = 'page-item' + (page >= totalPages - 1 ? ' disabled' : '');
+    nextLi.innerHTML = `
+        <a class="page-link" href="#" aria-label="Next">
+            <span aria-hidden="true">&raquo;</span>
+        </a>
+    `;
+    paginationContainer.appendChild(nextLi);
+
+    // 다음 페이지 버튼 이벤트
+    if (page < totalPages - 1) {
+        nextLi.addEventListener('click', function (e) {
+            e.preventDefault();
+            currentPage++;
+            updateURLFromState(false);
             fetchAndRenderPosts();
             window.scrollTo(0, 0);
         });
